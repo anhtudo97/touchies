@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Inter } from "next/font/google";
 
 import "./globals.css";
+import { ConvexClientProvider } from "@/components/provider";
 
 const inter = Inter({
   variable: "--font-inter-sans",
@@ -33,22 +34,24 @@ export default function RootLayout({
         theme: dark
       }}
     >
-      <html
-        lang="en"
-        className={`${inter.variable} ${plexMono.variable} h-full antialiased`}
-        suppressHydrationWarning
-      >
-        <body className="min-h-full flex flex-col">
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="dark"
-            enableSystem
-            disableTransitionOnChange
-          >
-            {children}
-          </ThemeProvider>
-        </body>
-      </html>
+      <ConvexClientProvider>
+        <html
+          lang="en"
+          className={`${inter.variable} ${plexMono.variable} h-full antialiased`}
+          suppressHydrationWarning
+        >
+          <body className="min-h-full flex flex-col">
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="dark"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+            </ThemeProvider>
+          </body>
+        </html>
+      </ConvexClientProvider>
     </ClerkProvider>
   );
 }
