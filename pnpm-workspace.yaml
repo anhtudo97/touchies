@@ -1,5 +1,6 @@
 allowBuilds:
   '@clerk/shared': true
+  '@sentry/cli': set this to true or false
   esbuild: true
   msw: false
   protobufjs: true
