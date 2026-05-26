@@ -1,6 +1,15 @@
-import { clerkMiddleware } from '@clerk/nextjs/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-export default clerkMiddleware();
+const ignoreRoute = createRouteMatcher([
+    "/sentry-example-page"
+]);
+
+export default clerkMiddleware(async (auth, req) => {
+    // Your Clerk authentication logic here
+    if (!ignoreRoute(req)) {
+        await auth.protect(); // Protect the route if it matches the defined criteria
+    }
+});
 
 export const config = {
     matcher: [
