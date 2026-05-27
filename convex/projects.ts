@@ -8,10 +8,9 @@ export const create = mutation({
     },
     handler: async (ctx, { name }) => {
         const identity = await verifyAuth(ctx);
-
-        const projectId = await ctx.db.insert("project", {
+        const projectId = await ctx.db.insert("projects", {
             name,
-            ownerId: identity.userId as string,
+            ownerId: identity.subject as string,
             updatedAt: Date.now(),
         });
 
@@ -31,7 +30,7 @@ export const getPartial = query({
         }
 
         return await ctx.db
-            .query("project")
+            .query("projects")
             .withIndex("by_owner", (q) =>
                 q.eq("ownerId", identity.subject)
             )
@@ -49,7 +48,7 @@ export const get = query({
         }
 
         return await ctx.db
-            .query("project")
+            .query("projects")
             .withIndex("by_owner", (q) =>
                 q.eq("ownerId", identity.subject)
             )

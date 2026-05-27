@@ -9,7 +9,10 @@ import { Poppins } from "next/font/google";
 import Image from "next/image";
 
 import { FaGithub } from "react-icons/fa";
+import { useCreateProject } from "./hooks/use-projects";
 import { ProjectsList } from "./projects-list";
+
+import { adjectives, animals, colors, uniqueNamesGenerator } from "unique-names-generator";
 
 const font = Poppins({
     subsets: ["latin"],
@@ -17,6 +20,16 @@ const font = Poppins({
 });
 
 export const ProjectsView = () => {
+    const createProject = useCreateProject();
+
+    const handleCreateProject = async () => {
+        const projectName = uniqueNamesGenerator({
+            dictionaries: [adjectives, colors, animals],
+            separator: " ",
+            length: 3,
+        });
+        await createProject({ name: projectName });
+    };
 
     return (
         <div className="min-h-screen bg-sidebar flex flex-col items-center justify-center p-6 md:p-16">
@@ -28,6 +41,10 @@ export const ProjectsView = () => {
                             src="/vercel.svg"
                             alt="Touchies"
                             className="size-8 md:size-11.5"
+                            quality={100}
+                            objectFit="cover"
+                            width={32}
+                            height={32}
                         />
                         <h1 className={cn(
                             "text-4xl md:text-5xl font-semibold",
@@ -42,6 +59,7 @@ export const ProjectsView = () => {
                     <div className="grid grid-cols-2 gap-2">
                         <Button
                             variant="outline"
+                            onClick={handleCreateProject}
                             className="h-full items-start justify-start p-4 bg-background border flex flex-col gap-6 rounded-none"
                         >
                             <div className="flex items-center justify-between w-full">
