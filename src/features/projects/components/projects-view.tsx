@@ -9,7 +9,7 @@ import { Poppins } from "next/font/google";
 import Image from "next/image";
 
 import { FaGithub } from "react-icons/fa";
-import { useCreateProject } from "./hooks/use-projects";
+import { useCreateProject } from "../hooks/use-projects";
 import { ProjectsList } from "./projects-list";
 
 import { adjectives, animals, colors, uniqueNamesGenerator } from "unique-names-generator";
