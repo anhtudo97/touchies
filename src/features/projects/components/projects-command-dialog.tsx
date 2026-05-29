@@ -1,8 +1,11 @@
+"use client";
+
 import { AlertCircleIcon, GlobeIcon, Loader2Icon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { FaGithub } from "react-icons/fa";
 
 import {
+    Command,
     CommandDialog,
     CommandEmpty,
     CommandGroup,
@@ -56,22 +59,24 @@ export const ProjectsCommandDialog = ({
             title="Search Projects"
             description="Search and navigate to your projects"
         >
-            <CommandInput placeholder="Search projects..." />
-            <CommandList>
-                <CommandEmpty>No projects found.</CommandEmpty>
-                <CommandGroup heading="Projects">
-                    {projects?.map((project) => (
-                        <CommandItem
-                            key={project._id}
-                            value={`${project.name}-${project._id}`}
-                            onSelect={() => handleSelect(project._id)}
-                        >
-                            {getProjectIcon(project)}
-                            <span>{project.name}</span>
-                        </CommandItem>
-                    ))}
-                </CommandGroup>
-            </CommandList>
+            <Command>
+                <CommandInput placeholder="Search projects..." />
+                <CommandList>
+                    <CommandEmpty>No projects found.</CommandEmpty>
+                    <CommandGroup heading="Projects">
+                        {projects?.map((project) => (
+                            <CommandItem
+                                key={project._id}
+                                value={`${project.name}-${project._id}`}
+                                onSelect={() => handleSelect(project._id)}
+                            >
+                                {getProjectIcon(project)}
+                                <span>{project.name}</span>
+                            </CommandItem>
+                        ))}
+                    </CommandGroup>
+                </CommandList>
+            </Command>
         </CommandDialog>
     );
 };

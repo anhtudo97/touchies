@@ -22,20 +22,15 @@ export const getPartial = query({
     args: {
         limit: v.number(),
     },
-    handler: async (ctx, { limit }) => {
+    handler: async (ctx, args) => {
         const identity = await verifyAuth(ctx);
-
-        if (!identity) {
-            return [];
-        }
 
         return await ctx.db
             .query("projects")
-            .withIndex("by_owner", (q) =>
-                q.eq("ownerId", identity.subject)
-            )
-            .take(limit);
-    }
+            .withIndex("by_owner", (q) => q.eq("ownerId", identity.subject))
+            .order("desc")
+            .take(args.limit);
+    },
 });
 
 export const get = query({
@@ -43,15 +38,10 @@ export const get = query({
     handler: async (ctx) => {
         const identity = await verifyAuth(ctx);
 
-        if (!identity) {
-            return [];
-        }
-
         return await ctx.db
             .query("projects")
-            .withIndex("by_owner", (q) =>
-                q.eq("ownerId", identity.subject)
-            )
+            .withIndex("by_owner", (q) => q.eq("ownerId", identity.subject))
+            .order("desc")
             .collect();
-    }
+    },
 });
