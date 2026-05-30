@@ -1,13 +1,19 @@
 "use client";
 
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from "@/components/ui/breadcrumb";
-import { Id } from "../../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
-import Image from "next/image";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Poppins } from "next/font/google";
+
 import { UserButton } from "@clerk/nextjs";
+import { formatDistanceToNow } from "date-fns/formatDistanceToNow";
+import { CloudCheckIcon, LoaderIcon } from "lucide-react";
+import { Poppins } from "next/font/google";
+import Image from "next/image";
+import Link from "next/link";
+
+import { Id } from "../../../../convex/_generated/dataModel";
+import { useProject } from "../hooks/use-projects";
 
 const font = Poppins({
     subsets: ["latin"],
@@ -19,6 +25,8 @@ export const Navbar = ({
 }: {
     projectId: Id<"projects">;
 }) => {
+    const project = useProject(projectId);
+
     return (
         <nav className="flex justify-between items-center gap-x-2 p-2 bg-sidebar border-b">
             <div className="flex items-center gap-x-2">
@@ -58,11 +66,34 @@ export const Navbar = ({
                             <BreadcrumbPage
                                 className="text-sm cursor-pointer hover:text-primary font-medium max-w-40 truncate"
                             >
-                                Demo Project
+                                {project?.name ?? "Loading..."}
                             </BreadcrumbPage>
                         </BreadcrumbItem>
                     </BreadcrumbList>
                 </Breadcrumb>
+                {project?.importStatus === "importing" ? (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <LoaderIcon className="size-4 text-muted-foreground animate-spin" />
+                        </TooltipTrigger>
+                        <TooltipContent>Importing...</TooltipContent>
+                    </Tooltip>
+                ) : (
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <CloudCheckIcon className="size-4 text-muted-foreground" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            Saved{" "}
+                            {project?.updatedAt
+                                ? formatDistanceToNow(
+                                    project.updatedAt,
+                                    { addSuffix: true, }
+                                )
+                                : "Loading..."}
+                        </TooltipContent>
+                    </Tooltip>
+                )}
             </div>
             <div className="flex items-center gap-2">
                 <UserButton />
