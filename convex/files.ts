@@ -69,6 +69,13 @@ export const getFolderContents = query({
             throw new Error("Unauthorized to access this project");
         }
 
+        if (args.parentId) {
+            const parent = await ctx.db.get("files", args.parentId);
+            if (!parent || parent.projectId !== args.projectId || parent.type !== "folder") {
+                throw new Error("Invalid parent folder");
+            }
+        }
+
         const files = await ctx.db
             .query("files")
             .withIndex("by_project_parent", (q) =>
@@ -108,6 +115,13 @@ export const createFile = mutation({
 
         if (project.ownerId !== identity.subject) {
             throw new Error("Unauthorized to access this project");
+        }
+
+        if (args.parentId) {
+            const parent = await ctx.db.get("files", args.parentId);
+            if (!parent || parent.projectId !== args.projectId || parent.type !== "folder") {
+                throw new Error("Invalid parent folder");
+            }
         }
 
         // Check if file with same name already exists in this parent folder
@@ -160,6 +174,13 @@ export const createFolder = mutation({
 
         if (project.ownerId !== identity.subject) {
             throw new Error("Unauthorized to access this project");
+        }
+
+        if (args.parentId) {
+            const parent = await ctx.db.get("files", args.parentId);
+            if (!parent || parent.projectId !== args.projectId || parent.type !== "folder") {
+                throw new Error("Invalid parent folder");
+            }
         }
 
         // Check if folder with same name already exists in this parent folder
@@ -326,6 +347,8 @@ export const updateFile = mutation({
         const file = await ctx.db.get("files", args.id);
 
         if (!file) throw new Error("File not found");
+
+        if (file.type !== "file") throw new Error("Cannot update a folder");
 
         const project = await ctx.db.get("projects", file.projectId);
 
