@@ -1,14 +1,25 @@
-import { cn } from "@/lib/utils";
-import { FileIcon, FolderIcon } from "@react-symbols/icons/utils";
-import { ChevronRightIcon } from "lucide-react";
 import { useState } from "react";
-import { Doc, Id } from "../../../../../convex/_generated/dataModel";
-import { useCreateFile, useCreateFolder, useDeleteFile, useFolderContents, useRenameFile } from "../../hooks/use-files";
+
+import { ChevronRightIcon } from "lucide-react";
+import { FileIcon, FolderIcon } from "@react-symbols/icons/utils";
+
+import { cn } from "@/lib/utils";
+
+import {
+    useCreateFile,
+    useCreateFolder,
+    useFolderContents,
+    useRenameFile,
+    useDeleteFile,
+} from "@/features/projects/hooks/use-files";
+import { useEditor } from "@/features/editor/hooks/use-editor";
+
 import { getItemPadding } from "./constants";
-import { CreateInput } from "./create-input";
 import { LoadingRow } from "./loading-row";
+import { CreateInput } from "./create-input";
 import { RenameInput } from "./rename-input";
 import { TreeItemWrapper } from "./tree-item-wrapper";
+import { Doc, Id } from "../../../../../convex/_generated/dataModel";
 
 export const Tree = ({
     item,
@@ -34,12 +45,13 @@ export const Tree = ({
     const createFile = useCreateFile();
     const createFolder = useCreateFolder();
 
+    const { openFile, closeTab, activeTabId } = useEditor(projectId);
+
     const folderContents = useFolderContents({
         projectId,
         parentId: item._id,
         enabled: item.type === "folder" && isOpen,
     });
-
 
     const handleRename = (newName: string) => {
         setIsRenaming(false);
@@ -77,6 +89,7 @@ export const Tree = ({
 
     if (item.type === "file") {
         const fileName = item.name;
+        const isActive = activeTabId === item._id;
 
         if (isRenaming) {
             return (
@@ -94,12 +107,12 @@ export const Tree = ({
             <TreeItemWrapper
                 item={item}
                 level={level}
-                isActive={false}
-                onClick={() => { }}
-                onDoubleClick={() => { }}
+                isActive={isActive}
+                onClick={() => openFile(item._id, { pinned: false })}
+                onDoubleClick={() => openFile(item._id, { pinned: true })}
                 onRename={() => setIsRenaming(true)}
                 onDelete={() => {
-                    // TODO: close tab
+                    closeTab(item._id);
                     deleteFile({ id: item._id });
                 }}
             >
