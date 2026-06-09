@@ -6,6 +6,10 @@ export const useFile = (fileId: Id<"files"> | null) => {
     return useQuery(api.files.getFile, fileId ? { id: fileId } : "skip");
 };
 
+export const useFilePath = (fileId: Id<"files"> | null) => {
+    return useQuery(api.files.getFilePath, fileId ? { id: fileId } : "skip");
+};
+
 export const useCreateFile = () => {
     return useMutation(api.files.createFile);
 };
