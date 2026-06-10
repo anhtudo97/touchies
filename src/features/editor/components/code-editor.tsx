@@ -1,8 +1,12 @@
-import { useEffect, useMemo, useRef } from "react";
-import { EditorView, keymap } from "@codemirror/view";
-import { oneDark } from "@codemirror/theme-one-dark";
 import { indentWithTab } from "@codemirror/commands";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { EditorView, keymap } from "@codemirror/view";
 import { indentationMarkers } from "@replit/codemirror-indentation-markers";
+import { useEffect, useMemo, useRef } from "react";
+
+import { customTheme } from "../extensions/theme";
+import { getLanguageExtension } from "../extensions/language-extension";
+import { minimap } from "../extensions/minimap";
 
 interface Props {
     fileName: string;
@@ -18,6 +22,10 @@ export const CodeEditor = ({
     const editorRef = useRef<HTMLDivElement>(null);
     const viewRef = useRef<EditorView | null>(null);
 
+    const languageExtension = useMemo(() => {
+        return getLanguageExtension(fileName);
+    }, [fileName]);
+
     useEffect(() => {
         if (!editorRef.current) return;
 
@@ -26,7 +34,10 @@ export const CodeEditor = ({
             parent: editorRef.current,
             extensions: [
                 oneDark,
+                customTheme,
+                languageExtension,
                 keymap.of([indentWithTab]),
+                minimap(),
                 indentationMarkers(),
                 EditorView.updateListener.of((update) => {
                     if (update.docChanged) {
@@ -41,7 +52,7 @@ export const CodeEditor = ({
         return () => {
             view.destroy();
         };
-    }, []);
+    }, [languageExtension]);
 
     return (
         <div ref={editorRef} className="size-full pl-4 bg-background" />
