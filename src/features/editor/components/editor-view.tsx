@@ -5,7 +5,8 @@ import { FileBreadcrumbs } from "./file-breadcrumbs";
 import { TopNavigation } from "./top-navigator";
 import Image from "next/image";
 import { CodeEditor } from "./code-editor";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { AlertTriangleIcon } from "lucide-react";
 
 const DEBOUNCE_MS = 1500;
 
@@ -15,9 +16,19 @@ export const EditorView = ({ projectId }: { projectId: Id<"projects">; }) => {
     const updateFile = useUpdateFile();
 
     const isActiveFileText = activeFile && !activeFile.storageId;
+    const isActiveFileBinary = activeFile && activeFile.storageId;
 
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-
+    console.log(activeTabId);
+    // updateFile({ id: activeFile._id, content });
+    // Cleanup pending debounced updates on unmount or file change
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, [activeTabId]);
 
     return (
         <div className="h-full flex flex-col">
@@ -52,6 +63,16 @@ export const EditorView = ({ projectId }: { projectId: Id<"projects">; }) => {
                             }, DEBOUNCE_MS);
                         }}
                     />
+                )}
+                {isActiveFileBinary && (
+                    <div className="size-full flex items-center justify-center">
+                        <div className="flex flex-col items-center gap-2.5 max-w-md text-center">
+                            <AlertTriangleIcon className="size-10 text-yellow-500" />
+                            <p className="text-sm">
+                                The file is not displayed in the text editor because it is either binary or uses an unsupported text encoding.
+                            </p>
+                        </div>
+                    </div>
                 )}
             </div>
         </div>
