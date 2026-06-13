@@ -49,7 +49,124 @@ class SuggestionWidget extends WidgetType {
     }
 }
 
-const isWaitingForSuggestion = false;
+let debounceTimer: number | null = null;
+let isWaitingForSuggestion = false;
+const DEBOUNCE_DELAY = 300;
+let currentAbortController: AbortController | null = null;
+
+const generatePayload = (view: EditorView, fileName: string) => {
+    const code = view.state.doc.toString();
+    if (!code || code.trim().length === 0) return null;
+
+    const cursorPosition = view.state.selection.main.head;
+    const currentLine = view.state.doc.lineAt(cursorPosition);
+    const cursorInLine = cursorPosition - currentLine.from;
+
+    const previousLines: string[] = [];
+    const previousLinesToFetch = Math.min(5, currentLine.number - 1);
+    for (let i = previousLinesToFetch; i >= 1; i--) {
+        previousLines.push(view.state.doc.line(currentLine.number - i).text);
+    }
+
+    const nextLines: string[] = [];
+    const totalLines = view.state.doc.lines;
+    const linesToFetch = Math.min(5, totalLines - currentLine.number);
+    for (let i = 1; i <= linesToFetch; i++) {
+        nextLines.push(view.state.doc.line(currentLine.number + i).text);
+    }
+
+    return {
+        fileName,
+        code,
+        currentLine: currentLine.text,
+        previousLines: previousLines.join("\n"),
+        textBeforeCursor: currentLine.text.slice(0, cursorInLine),
+        textAfterCursor: currentLine.text.slice(cursorInLine),
+        nextLines: nextLines.join("\n"),
+        lineNumber: currentLine.number,
+    };
+};
+
+const createDebouncePlugin = (fileName: string) => {
+    return ViewPlugin.fromClass(
+        class {
+            constructor(view: EditorView) {
+                this.triggerSuggestion(view);
+            }
+
+            update(update: ViewUpdate) {
+                if (update.docChanged || update.selectionSet) {
+                    this.triggerSuggestion(update.view);
+                }
+            }
+
+            triggerSuggestion(view: EditorView) {
+                if (debounceTimer !== null) {
+                    clearTimeout(debounceTimer);
+                }
+
+                if (currentAbortController !== null) {
+                    currentAbortController.abort();
+                }
+
+                isWaitingForSuggestion = true;
+
+                debounceTimer = window.setTimeout(async () => {
+                    const payload = generatePayload(view, fileName);
+                    if (!payload) {
+                        isWaitingForSuggestion = false;
+                        view.dispatch({ effects: setSuggestionEffect.of(null) });
+                        return;
+                    }
+                    currentAbortController = new AbortController();
+                    // const suggestion = await fetcher(
+                    //     payload,
+                    //     currentAbortController.signal
+                    // );
+
+                    // TODO: Replace the above line with actual API call to fetch suggestion based on payload and handle abort signal
+                    const suggestion = generateMockSuggestion(payload);
+
+                    isWaitingForSuggestion = false;
+                    view.dispatch({
+                        effects: setSuggestionEffect.of(suggestion),
+                    });
+                }, DEBOUNCE_DELAY);
+            }
+
+            destroy() {
+                if (debounceTimer !== null) {
+                    clearTimeout(debounceTimer);
+                }
+
+                if (currentAbortController !== null) {
+                    currentAbortController.abort();
+                }
+            }
+        }
+    );
+};
+
+const generateMockSuggestion = (payload: ReturnType<typeof generatePayload>) => {
+    if (!payload) return null;
+    const { textBeforeCursor } = payload;
+    if (textBeforeCursor.endsWith("console.")) {
+        return "log('Hello, world!')";
+    }
+    if (textBeforeCursor.endsWith("function ")) {
+        return "myFunction() {\n  // ...\n}";
+    }
+    if (textBeforeCursor.endsWith("if ")) {
+        return "(condition) {\n  // ...\n}";
+    }
+    if (textBeforeCursor.endsWith("for ")) {
+        return "(let i = 0; i < length; i++) {\n  // ...\n}";
+    }
+    if (textBeforeCursor.endsWith("const ")) {
+        return "myConstant = value;";
+    }
+    return null;
+};
 
 const renderPlugin = ViewPlugin.fromClass(
     class {
@@ -100,9 +217,29 @@ const renderPlugin = ViewPlugin.fromClass(
     { decorations: (plugin) => plugin.decorations } // Tell CodeMirror to use our decorations
 );
 
+const acceptSuggestionKeymap = keymap.of([
+    {
+        key: "Tab",
+        run: (view) => {
+            const suggestion = view.state.field(suggestionState);
+            if (!suggestion) {
+                return false; // No suggestion? Let Tab do its normal thing (indent)
+            }
+
+            const cursor = view.state.selection.main.head;
+            view.dispatch({
+                changes: { from: cursor, insert: suggestion }, // Insert the suggestion text
+                selection: { anchor: cursor + suggestion.length }, // Move cursor to end
+                effects: setSuggestionEffect.of(null), // Clear the suggestion
+            });
+            return true; // We handled Tab, don't indent
+        },
+    },
+]);
+
 export const suggestion = (fileName: string) => [
     suggestionState, // Our state storage
-    // createDebouncePlugin(fileName), // Triggers suggestions on typing
+    createDebouncePlugin(fileName), // Triggers suggestions on typing
     renderPlugin, // Renders the ghost text
-    // acceptSuggestionKeymap, // Tab to accept
+    acceptSuggestionKeymap, // Tab to accept
 ];
