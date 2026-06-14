@@ -8,6 +8,7 @@ import {
     keymap,
 } from "@codemirror/view";
 import { StateEffect, StateField } from "@codemirror/state";
+import { fetcher } from "./fetcher";
 
 // StateEffect: A way to send "messages" to update state.
 // We define one effect type for setting the suggestion text.
@@ -119,13 +120,15 @@ const createDebouncePlugin = (fileName: string) => {
                         return;
                     }
                     currentAbortController = new AbortController();
-                    // const suggestion = await fetcher(
-                    //     payload,
-                    //     currentAbortController.signal
-                    // );
+
+                    // TODO: This formation should be fetched from the editor state, not hardcoded in the plugin
+                    const suggestion = await fetcher(
+                        payload,
+                        currentAbortController.signal
+                    );
 
                     // TODO: Replace the above line with actual API call to fetch suggestion based on payload and handle abort signal
-                    const suggestion = generateMockSuggestion(payload);
+                    // const suggestion = generateMockSuggestion(payload);
 
                     isWaitingForSuggestion = false;
                     view.dispatch({

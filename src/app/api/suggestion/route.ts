@@ -85,7 +85,7 @@ export async function POST(request: Request) {
 
         const { output } = await generateText({
             // model: anthropic("claude-3-7-sonnet-20250219"),
-            model: google("gemini-2.0-flash"),
+            model: google("gemini-2.5-flash"),
             output: Output.object({ schema: suggestionSchema }),
             prompt,
         });
