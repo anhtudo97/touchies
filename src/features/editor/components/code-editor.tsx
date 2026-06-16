@@ -8,6 +8,7 @@ import { customTheme } from "../extensions/theme";
 import { getLanguageExtension } from "../extensions/language-extension";
 import { minimap } from "../extensions/minimap";
 import { customSetup } from "../extensions/custom-setup";
+import { suggestion } from "../extensions/suggestion";
 
 interface Props {
     fileName: string;
@@ -38,6 +39,7 @@ export const CodeEditor = ({
                 customTheme,
                 customSetup,
                 languageExtension,
+                suggestion(fileName),
                 keymap.of([indentWithTab]),
                 minimap(),
                 indentationMarkers(),
