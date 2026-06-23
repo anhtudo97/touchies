@@ -49,7 +49,6 @@ export const processMessage = inngest.createFunction(
             message
         } = event.data as MessageEvent;
 
-
         const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY;
 
         if (!internalKey) {
