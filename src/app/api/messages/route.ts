@@ -1,12 +1,12 @@
-import { auth } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
 import { z } from "zod";
+import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 
 import { inngest } from "@/inngest/client";
-
 import { convex } from "@/lib/convex-client";
-import { Id } from "../../../../convex/_generated/dataModel";
+
 import { api } from "../../../../convex/_generated/api";
+import { Id } from "../../../../convex/_generated/dataModel";
 
 const requestSchema = z.object({
     conversationId: z.string(),
@@ -46,6 +46,35 @@ export async function POST(request: Request) {
     }
 
     const projectId = conversation.projectId;
+
+    // Find all processing messages in this project
+    const processingMessages = await convex.query(
+        api.system.getProcessingMessages,
+        {
+            internalKey,
+            projectId,
+        }
+    );
+
+    if (processingMessages.length > 0) {
+        // Cancel all processing messages
+        await Promise.all(
+            processingMessages.map(async (msg) => {
+                await inngest.send({
+                    name: "message/cancel",
+                    data: {
+                        messageId: msg._id,
+                    },
+                });
+
+                await convex.mutation(api.system.updateMessageStatus, {
+                    internalKey,
+                    messageId: msg._id,
+                    status: "cancelled",
+                });
+            })
+        );
+    }
 
     // Create user message
     await convex.mutation(api.system.createMessage, {
