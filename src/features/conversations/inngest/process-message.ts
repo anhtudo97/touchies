@@ -8,6 +8,7 @@ import { NonRetriableError } from "inngest";
 import { CODING_AGENT_SYSTEM_PROMPT, TITLE_GENERATOR_SYSTEM_PROMPT } from "./constant";
 import { DEFAULT_CONVERSATION_TITLE } from "../constants";
 import { createReadFilesTool } from './tools/read-files';
+import { createListFilesTool } from './tools/list-files';
 
 interface MessageEvent {
     messageId: Id<"messages">;
@@ -152,7 +153,7 @@ export const processMessage = inngest.createFunction(
                 defaultParameters: { temperature: 0.3, max_tokens: 16000 }
             }),
             tools: [
-                // createListFilesTool({ internalKey, projectId }),
+                createListFilesTool({ internalKey, projectId }),
                 createReadFilesTool({ internalKey }),
                 // createUpdateFileTool({ internalKey }),
                 // createCreateFilesTool({ projectId, internalKey }),
