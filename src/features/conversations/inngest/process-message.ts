@@ -9,6 +9,8 @@ import { CODING_AGENT_SYSTEM_PROMPT, TITLE_GENERATOR_SYSTEM_PROMPT } from "./con
 import { DEFAULT_CONVERSATION_TITLE } from "../constants";
 import { createReadFilesTool } from './tools/read-files';
 import { createListFilesTool } from './tools/list-files';
+import { createUpdateFileTool } from './tools/update-file';
+import { createCreateFilesTool } from './tools/create-file';
 
 interface MessageEvent {
     messageId: Id<"messages">;
@@ -155,8 +157,8 @@ export const processMessage = inngest.createFunction(
             tools: [
                 createListFilesTool({ internalKey, projectId }),
                 createReadFilesTool({ internalKey }),
-                // createUpdateFileTool({ internalKey }),
-                // createCreateFilesTool({ projectId, internalKey }),
+                createUpdateFileTool({ internalKey }),
+                createCreateFilesTool({ projectId, internalKey }),
                 // createCreateFolderTool({ projectId, internalKey }),
                 // createRenameFileTool({ internalKey }),
                 // createDeleteFilesTool({ internalKey }),
