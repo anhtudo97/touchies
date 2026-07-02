@@ -7,11 +7,14 @@ import { api } from "../../../../convex/_generated/api";
 import { NonRetriableError } from "inngest";
 import { CODING_AGENT_SYSTEM_PROMPT, TITLE_GENERATOR_SYSTEM_PROMPT } from "./constant";
 import { DEFAULT_CONVERSATION_TITLE } from "../constants";
+
 import { createReadFilesTool } from './tools/read-files';
 import { createListFilesTool } from './tools/list-files';
 import { createUpdateFileTool } from './tools/update-file';
 import { createCreateFilesTool } from './tools/create-file';
 import { createCreateFolderTool } from './tools/create-folder';
+import { createRenameFileTool } from './tools/rename-file';
+import { createDeleteFilesTool } from './tools/delete-files';
 
 interface MessageEvent {
     messageId: Id<"messages">;
@@ -161,8 +164,8 @@ export const processMessage = inngest.createFunction(
                 createUpdateFileTool({ internalKey }),
                 createCreateFilesTool({ projectId, internalKey }),
                 createCreateFolderTool({ projectId, internalKey }),
-                // createRenameFileTool({ internalKey }),
-                // createDeleteFilesTool({ internalKey }),
+                createRenameFileTool({ internalKey }),
+                createDeleteFilesTool({ internalKey }),
                 // createScrapeUrlsTool(),
             ],
         });
