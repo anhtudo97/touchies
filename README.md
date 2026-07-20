@@ -1,15 +1,21 @@
 # Polaris
 
-Polaris is a Next.js 16 workspace for an AI-assisted code editing experience, built with React 19, Tailwind CSS 4, Convex backend functions, and Inngest workflows.
+Polaris is a Next.js 16 workspace for an AI-assisted code editing experience, built with React 19, Tailwind CSS 4, Convex backend functions, and Inngest workflows. It ships an in-browser code editor (CodeMirror + WebContainer preview), an AI chat/agent pipeline for editing project files, and GitHub import/export.
 
 ## Tech Stack
 
 - Next.js 16 (App Router)
 - React 19
 - TypeScript
-- Tailwind CSS 4
-- Convex
-- Inngest
+- Tailwind CSS 4 + shadcn/Radix UI
+- Convex (database + server functions)
+- Inngest (background jobs, AI agent workflows)
+- Clerk (authentication)
+- CodeMirror 6 (code editor)
+- WebContainer API (in-browser preview/terminal)
+- AI SDK (Anthropic + Google providers) + Inngest Agent Kit
+- Octokit (GitHub import/export)
+- Sentry (error monitoring)
 - ESLint + Prettier
 - Husky + Commitlint
 
@@ -50,20 +56,37 @@ pnpm inngest:dev  # Start Inngest local dev server
 ## Project Structure
 
 ```text
-convex/                    # Backend schema and server functions (auth, files, projects)
-public/                    # Static assets
+convex/                        # Convex backend
+	schema.ts                    # Database schema
+	auth.ts, auth.config.ts      # Auth wiring (Clerk <-> Convex)
+	projects.ts, files.ts        # Project & file queries/mutations
+	conversations.ts             # Chat/conversation queries/mutations
+	system.ts                    # System-level functions
+public/                         # Static assets
 src/
-	app/                     # App Router pages, layouts, route handlers, and global styles
-		api/                   # API route handlers (inngest, quick-edit, suggestion)
-		projects/[projectId]/  # Project workspace routes
+	app/                          # App Router pages, layouts, route handlers, global styles
+		api/
+			github/import/, github/export/  # GitHub import/export route handlers
+			inngest/                # Inngest serve endpoint
+			messages/, messages/cancel/      # Chat message route handlers
+			quick-edit/, suggestion/         # AI editor route handlers
+		projects/[projectId]/     # Project workspace route (layout + page)
 	components/
-		ui/                    # Reusable UI primitives
-	features/                # Domain features (auth, editor, projects)
-	hooks/                   # Shared React hooks
-	inngest/                 # Inngest client and functions wiring
-	lib/                     # Shared utilities and integrations
-	instrumentation*.ts      # Monitoring/instrumentation setup
-	proxy.ts                 # Proxy/runtime middleware entry
+		ai-elements/                # AI chat/message UI building blocks
+		ui/                         # shadcn/Radix UI primitives
+		provider.tsx, theme-provider.tsx
+	features/                    # Domain features
+		auth/                       # Auth loading/unauthenticated views
+		conversations/              # Chat sidebar, hooks, Inngest agent + tools
+			inngest/tools/            # Agent tools (create/read/update/rename/delete files, scrape urls, list files)
+		editor/                     # CodeMirror editor, extensions (quick-edit, suggestion, minimap, theme), store
+		preview/                    # WebContainer preview, terminal, hooks, file-tree utils
+		projects/                   # Project list/view, navbar, file-explorer, GitHub import dialog, export popover
+	hooks/                       # Shared React hooks
+	inngest/                     # Inngest client and functions wiring
+	lib/                         # Shared utilities (Convex client, Firecrawl, utils)
+	instrumentation*.ts          # Monitoring/instrumentation setup
+	proxy.ts                     # Proxy/runtime middleware entry
 ```
 
 ## Development Notes
@@ -71,7 +94,10 @@ src/
 - App entry page: `src/app/page.tsx`
 - Root layout: `src/app/layout.tsx`
 - Global styles: `src/app/globals.css`
-- Editor feature lives in: `src/features/editor`
+- Project workspace route: `src/app/projects/[projectId]`
+- Editor feature: `src/features/editor`
+- Conversations/AI agent feature: `src/features/conversations`
+- Preview (WebContainer) feature: `src/features/preview`
 - Convex schema entry: `convex/schema.ts`
 
 ## Learn More
