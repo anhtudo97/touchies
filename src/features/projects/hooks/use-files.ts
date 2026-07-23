@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "convex/react";
-import { Id } from "../../../../convex/_generated/dataModel";
+import { OptimisticLocalStore } from "convex/browser";
+import { Doc, Id } from "../../../../convex/_generated/dataModel";
 import { api } from "../../../../convex/_generated/api";
 
 // Sort: folders first, then files, alphabetically within each group
@@ -11,6 +12,25 @@ const sortFiles = <T extends { type: "file" | "folder"; name: string; }>(
         if (a.type === "file" && b.type === "folder") return 1;
         return a.name.localeCompare(b.name);
     });
+};
+
+type FolderContentsArgs = {
+    projectId: Id<"projects">;
+    parentId?: Id<"files">;
+};
+
+// Shared optimistic-update shape for getFolderContents: read the cached list,
+// apply the mutation-specific transform, then write back sorted.
+const updateFolderContentsOptimistically = (
+    localStore: OptimisticLocalStore,
+    args: FolderContentsArgs,
+    transform: (existingFiles: Doc<"files">[]) => Doc<"files">[]
+) => {
+    const existingFiles = localStore.getQuery(api.files.getFolderContents, args);
+
+    if (existingFiles !== undefined) {
+        localStore.setQuery(api.files.getFolderContents, args, sortFiles(transform(existingFiles)));
+    }
 };
 
 export const useFiles = (projectId: Id<"projects"> | null) => {
@@ -32,31 +52,23 @@ export const useUpdateFile = () => {
 export const useCreateFile = () => {
     return useMutation(api.files.createFile).withOptimisticUpdate(
         (localStore, args) => {
-            const existingFiles = localStore.getQuery(api.files.getFolderContents, {
+            const now = Date.now();
+            const newFile: Doc<"files"> = {
+                _id: crypto.randomUUID() as Id<"files">,
+                _creationTime: now,
                 projectId: args.projectId,
                 parentId: args.parentId,
-            });
+                name: args.name,
+                content: args.content,
+                type: "file",
+                updatedAt: now,
+            };
 
-            if (existingFiles !== undefined) {
-                // eslint-disable-next-line react-hooks/purity -- optimistic update callback runs on mutation, not render
-                const now = Date.now();
-                const newFile = {
-                    _id: crypto.randomUUID() as Id<"files">,
-                    _creationTime: now,
-                    projectId: args.projectId,
-                    parentId: args.parentId,
-                    name: args.name,
-                    content: args.content,
-                    type: "file" as const,
-                    updatedAt: now,
-                };
-
-                localStore.setQuery(
-                    api.files.getFolderContents,
-                    { projectId: args.projectId, parentId: args.parentId },
-                    sortFiles([...existingFiles, newFile])
-                );
-            }
+            updateFolderContentsOptimistically(
+                localStore,
+                { projectId: args.projectId, parentId: args.parentId },
+                (existingFiles) => [...existingFiles, newFile]
+            );
         }
     );
 };
@@ -64,30 +76,22 @@ export const useCreateFile = () => {
 export const useCreateFolder = () => {
     return useMutation(api.files.createFolder).withOptimisticUpdate(
         (localStore, args) => {
-            const existingFiles = localStore.getQuery(api.files.getFolderContents, {
+            const now = Date.now();
+            const newFolder: Doc<"files"> = {
+                _id: crypto.randomUUID() as Id<"files">,
+                _creationTime: now,
                 projectId: args.projectId,
                 parentId: args.parentId,
-            });
+                name: args.name,
+                type: "folder",
+                updatedAt: now,
+            };
 
-            if (existingFiles !== undefined) {
-                // eslint-disable-next-line react-hooks/purity -- optimistic update callback runs on mutation, not render
-                const now = Date.now();
-                const newFolder = {
-                    _id: crypto.randomUUID() as Id<"files">,
-                    _creationTime: now,
-                    projectId: args.projectId,
-                    parentId: args.parentId,
-                    name: args.name,
-                    type: "folder" as const,
-                    updatedAt: now,
-                };
-
-                localStore.setQuery(
-                    api.files.getFolderContents,
-                    { projectId: args.projectId, parentId: args.parentId },
-                    sortFiles([...existingFiles, newFolder])
-                );
-            }
+            updateFolderContentsOptimistically(
+                localStore,
+                { projectId: args.projectId, parentId: args.parentId },
+                (existingFiles) => [...existingFiles, newFolder]
+            );
         }
     );
 };
@@ -101,22 +105,14 @@ export const useRenameFile = ({
 }) => {
     return useMutation(api.files.renameFile).withOptimisticUpdate(
         (localStore, args) => {
-            const existingFiles = localStore.getQuery(api.files.getFolderContents, {
-                projectId,
-                parentId,
-            });
-
-            if (existingFiles !== undefined) {
-                const updatedFiles = existingFiles.map((file) =>
-                    file._id === args.id ? { ...file, name: args.newName } : file
-                );
-
-                localStore.setQuery(
-                    api.files.getFolderContents,
-                    { projectId, parentId },
-                    sortFiles(updatedFiles)
-                );
-            }
+            updateFolderContentsOptimistically(
+                localStore,
+                { projectId, parentId },
+                (existingFiles) =>
+                    existingFiles.map((file) =>
+                        file._id === args.id ? { ...file, name: args.newName } : file
+                    )
+            );
         }
     );
 };
@@ -130,18 +126,11 @@ export const useDeleteFile = ({
 }) => {
     return useMutation(api.files.deleteFile).withOptimisticUpdate(
         (localStore, args) => {
-            const existingFiles = localStore.getQuery(api.files.getFolderContents, {
-                projectId,
-                parentId,
-            });
-
-            if (existingFiles !== undefined) {
-                localStore.setQuery(
-                    api.files.getFolderContents,
-                    { projectId, parentId },
-                    existingFiles.filter((file) => file._id !== args.id)
-                );
-            }
+            updateFolderContentsOptimistically(
+                localStore,
+                { projectId, parentId },
+                (existingFiles) => existingFiles.filter((file) => file._id !== args.id)
+            );
         }
     );
 };
