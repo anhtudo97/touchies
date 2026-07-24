@@ -1,10 +1,10 @@
 import { z } from "zod";
 import { generateText, Output } from "ai";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { anthropic } from "@ai-sdk/anthropic";
 
 import { firecrawl } from "@/lib/firecrawl";
+import { requireAuth } from "@/lib/api-route-auth-helpers";
 
 const quickEditSchema = z.object({
     editedCode: z
@@ -43,15 +43,10 @@ const QUICK_EDIT_PROMPT = `You are a code editing assistant. Edit the selected c
 
 export async function POST(request: Request) {
     try {
-        const { userId } = await auth();
-        const { selectedCode, fullCode, instruction } = await request.json();
+        const authResult = await requireAuth(400);
+        if (!authResult.ok) return authResult.response;
 
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 400 }
-            );
-        }
+        const { selectedCode, fullCode, instruction } = await request.json();
 
         if (!selectedCode) {
             return NextResponse.json(

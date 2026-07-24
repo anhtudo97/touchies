@@ -1,12 +1,12 @@
 import { z } from "zod"
 import { NextResponse } from "next/server"
-import { auth } from "@clerk/nextjs/server"
 import { adjectives, animals, colors, uniqueNamesGenerator } from "unique-names-generator"
 
 import { DEFAULT_CONVERSATION_TITLE } from "@/features/conversations/constants"
 
 import { inngest } from "@/inngest/client"
 import { convex } from "@/lib/convex-client"
+import { requireAuth, requireInternalKey } from "@/lib/api-route-auth-helpers"
 
 import { api } from "../../../../../convex/_generated/api"
 
@@ -15,17 +15,13 @@ const requestSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const { userId } = await auth()
+  const authResult = await requireAuth()
+  if (!authResult.ok) return authResult.response
+  const { userId } = authResult
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY
-
-  if (!internalKey) {
-    return NextResponse.json({ error: "Internal key not configured" }, { status: 500 })
-  }
+  const internalKeyResult = requireInternalKey("Internal key not configured")
+  if (!internalKeyResult.ok) return internalKeyResult.response
+  const { internalKey } = internalKeyResult
 
   const body = await request.json()
   const { prompt } = requestSchema.parse(body)

@@ -1,10 +1,8 @@
 import { z } from "zod"
 import { NextResponse } from "next/server"
-import { auth, clerkClient } from "@clerk/nextjs/server"
 
 import { inngest } from "@/inngest/client"
-
-import { Id } from "../../../../../convex/_generated/dataModel"
+import { requireAuth, requireInternalKey, requirePro, getGithubToken } from "@/lib/api-route-auth-helpers"
 
 const requestSchema = z.object({
   projectId: z.string(),
@@ -14,34 +12,23 @@ const requestSchema = z.object({
 })
 
 export async function POST(request: Request) {
-  const { userId, has } = await auth()
+  const authResult = await requireAuth()
+  if (!authResult.ok) return authResult.response
+  const { userId, has } = authResult
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  }
-
-  const hasPro = has({ plan: "pro" })
-
-  if (!hasPro) {
-    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
-  }
+  const proResult = requirePro(has)
+  if (!proResult.ok) return proResult.response
 
   const body = await request.json()
   const { projectId, repoName, visibility, description } = requestSchema.parse(body)
 
-  const client = await clerkClient()
-  const tokens = await client.users.getUserOauthAccessToken(userId, "github")
-  const githubToken = tokens.data[0]?.token
+  const githubTokenResult = await getGithubToken(userId)
+  if (!githubTokenResult.ok) return githubTokenResult.response
+  const { githubToken } = githubTokenResult
 
-  if (!githubToken) {
-    return NextResponse.json({ error: "GitHub not connected. Please reconnect your GitHub account." }, { status: 400 })
-  }
-
-  const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY
-
-  if (!internalKey) {
-    return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
-  }
+  const internalKeyResult = requireInternalKey()
+  if (!internalKeyResult.ok) return internalKeyResult.response
+  const { internalKey } = internalKeyResult
 
   const event = await inngest.send({
     name: "github/export.repo",

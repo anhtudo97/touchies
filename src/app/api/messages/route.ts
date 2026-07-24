@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 
 import { inngest } from "@/inngest/client";
 import { convex } from "@/lib/convex-client";
+import { requireAuth, requireInternalKey } from "@/lib/api-route-auth-helpers";
+import { cancelProcessingMessages } from "@/lib/cancel-processing-messages";
 
 import { api } from "../../../../convex/_generated/api";
 import { Id } from "../../../../convex/_generated/dataModel";
@@ -14,20 +15,12 @@ const requestSchema = z.object({
 });
 
 export async function POST(request: Request) {
-    const { userId } = await auth();
+    const authResult = await requireAuth();
+    if (!authResult.ok) return authResult.response;
 
-    if (!userId) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY;
-
-    if (!internalKey) {
-        return NextResponse.json(
-            { error: "Internal key not configured" },
-            { status: 500 }
-        );
-    }
+    const internalKeyResult = requireInternalKey("Internal key not configured");
+    if (!internalKeyResult.ok) return internalKeyResult.response;
+    const { internalKey } = internalKeyResult;
 
     const body = await request.json();
     const { conversationId, message } = requestSchema.parse(body);
@@ -47,34 +40,8 @@ export async function POST(request: Request) {
 
     const projectId = conversation.projectId;
 
-    // Find all processing messages in this project
-    const processingMessages = await convex.query(
-        api.system.getProcessingMessages,
-        {
-            internalKey,
-            projectId,
-        }
-    );
-
-    if (processingMessages.length > 0) {
-        // Cancel all processing messages
-        await Promise.all(
-            processingMessages.map(async (msg) => {
-                await inngest.send({
-                    name: "message/cancel",
-                    data: {
-                        messageId: msg._id,
-                    },
-                });
-
-                await convex.mutation(api.system.updateMessageStatus, {
-                    internalKey,
-                    messageId: msg._id,
-                    status: "cancelled",
-                });
-            })
-        );
-    }
+    // Cancel any in-flight messages in this project before starting a new one
+    await cancelProcessingMessages(internalKey, projectId);
 
     // Create user message
     await convex.mutation(api.system.createMessage, {

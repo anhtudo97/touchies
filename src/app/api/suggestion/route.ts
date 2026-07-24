@@ -1,9 +1,10 @@
 import { generateText, Output } from "ai";
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 // import { anthropic } from "@ai-sdk/anthropic";
 import { google } from "@ai-sdk/google";
+
+import { requireAuth } from "@/lib/api-route-auth-helpers";
 
 const suggestionSchema = z.object({
     suggestion: z
@@ -46,14 +47,8 @@ const SUGGESTION_PROMPT = `You are a code suggestion assistant.
 
 export async function POST(request: Request) {
     try {
-        const { userId } = await auth();
-
-        if (!userId) {
-            return NextResponse.json(
-                { error: "Unauthorized" },
-                { status: 403 },
-            );
-        }
+        const authResult = await requireAuth(403);
+        if (!authResult.ok) return authResult.response;
 
         const {
             fileName,
