@@ -79,12 +79,15 @@ src/
 		auth/                       # Auth loading/unauthenticated views
 		conversations/              # Chat sidebar, hooks, Inngest agent + tools
 			inngest/tools/            # Agent tools (create/read/update/rename/delete files, scrape urls, list files)
+				create-validated-tool.ts  # Shared Zod-validated tool wrapper
+				get-file-by-id.ts         # Shared Convex file lookup
+				resolve-parent-folder.ts  # Shared parent-folder validation
 		editor/                     # CodeMirror editor, extensions (quick-edit, suggestion, minimap, theme), store
 		preview/                    # WebContainer preview, terminal, hooks, file-tree utils
 		projects/                   # Project list/view, navbar, file-explorer, GitHub import dialog, export popover
 	hooks/                       # Shared React hooks
-	inngest/                     # Inngest client and functions wiring
-	lib/                         # Shared utilities (Convex client, Firecrawl, utils)
+	inngest/                     # Inngest client, functions wiring, shared onFailure/internal-key helpers
+	lib/                         # Shared utilities (Convex client, Firecrawl, API-route auth helpers, message cancellation)
 	instrumentation*.ts          # Monitoring/instrumentation setup
 	proxy.ts                     # Proxy/runtime middleware entry
 ```
@@ -99,6 +102,7 @@ src/
 - Conversations/AI agent feature: `src/features/conversations`
 - Preview (WebContainer) feature: `src/features/preview`
 - Convex schema entry: `convex/schema.ts`
+- Shared internal-key checks: `src/inngest/require-internal-key.ts` (Inngest functions), `src/lib/api-route-auth-helpers.ts` (API routes)
 
 ## Learn More
 
