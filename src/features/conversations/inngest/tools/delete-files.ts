@@ -1,5 +1,6 @@
 import { convex } from "@/lib/convex-client";
-import { createTool } from "@inngest/agent-kit";
+import { createValidatedTool } from "./create-validated-tool";
+import { getFileById } from "./get-file-by-id";
 import z from "zod";
 import { api } from "../../../../../convex/_generated/api";
 import { Id } from "../../../../../convex/_generated/dataModel";
@@ -15,7 +16,7 @@ const paramsSchema = z.object({
 });
 
 export const createDeleteFilesTool = ({ internalKey }: DeleteFilesToolOptions) => {
-    return createTool({
+    return createValidatedTool({
         name: "deleteFiles",
         description: "Deletes files from the project",
         parameters: z.object({
@@ -23,15 +24,8 @@ export const createDeleteFilesTool = ({ internalKey }: DeleteFilesToolOptions) =
                 .array(z.string().min(1, "File ID cannot be empty"))
                 .min(1, "At least one file ID must be provided"),
         }),
-        handler: async (params, { step: toolStep }) => {
-            const parsedParams = paramsSchema.safeParse(params);
-
-            if (!parsedParams.success) {
-                return `Error: ${parsedParams.error.message}`;
-            }
-
-            const { fileIds } = parsedParams.data;
-
+        paramsSchema,
+        run: async ({ fileIds }, { step: toolStep }) => {
             const filesToDelete: {
                 id: string;
                 name: string;
@@ -39,7 +33,7 @@ export const createDeleteFilesTool = ({ internalKey }: DeleteFilesToolOptions) =
             }[] = [];
 
             for (const fileId of fileIds) {
-                const file = await convex.query(api.system.getFileById, { internalKey, fileId: fileId as Id<"files"> });
+                const file = await getFileById(internalKey, fileId);
 
                 if (!file) {
                     return `Error: File with ID ${fileId} not found.`;
@@ -52,20 +46,16 @@ export const createDeleteFilesTool = ({ internalKey }: DeleteFilesToolOptions) =
                 });
             }
 
-            try {
-                return await toolStep?.run("delete-files", async () => {
-                    const results: string[] = [];
+            return await toolStep?.run("delete-files", async () => {
+                const results: string[] = [];
 
-                    for (const file of filesToDelete) {
-                        await convex.mutation(api.system.deleteFile, { internalKey, fileId: file.id as Id<"files"> });
-                        results.push(`Deleted ${file.type} "${file.name}" (ID: ${file.id})`);
-                    }
+                for (const file of filesToDelete) {
+                    await convex.mutation(api.system.deleteFile, { internalKey, fileId: file.id as Id<"files"> });
+                    results.push(`Deleted ${file.type} "${file.name}" (ID: ${file.id})`);
+                }
 
-                    return results.join("\n");
-                });
-            } catch (error) {
-                return `Error: ${error instanceof Error ? error.message : "An unknown error occurred."}`;
-            }
+                return results.join("\n");
+            });
         }
     });
 };

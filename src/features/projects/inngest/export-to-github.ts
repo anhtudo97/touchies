@@ -4,6 +4,8 @@ import { NonRetriableError } from "inngest"
 
 import { convex } from "@/lib/convex-client"
 import { inngest } from "@/inngest/client"
+import { withInternalKeyFailureHandler } from "@/inngest/with-internal-key-failure-handler"
+import { requireInternalKey } from "@/inngest/require-internal-key"
 
 import { api } from "../../../../convex/_generated/api"
 import { Doc, Id } from "../../../../convex/_generated/dataModel"
@@ -32,28 +34,21 @@ export const exportToGithub = inngest.createFunction(
         if: "event.data.projectId == async.data.projectId"
       }
     ],
-    onFailure: async ({ event, step }) => {
-      const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY
-      if (!internalKey) return
-
-      const { projectId } = event.data.event.data as ExportToGithubEvent
-
-      await step.run("set-failed-status", async () => {
+    onFailure: withInternalKeyFailureHandler<ExportToGithubEvent>(
+      "set-failed-status",
+      async (internalKey, { projectId }) => {
         await convex.mutation(api.system.updateExportStatus, {
           internalKey,
           projectId,
           status: "failed"
         })
-      })
-    }
+      }
+    )
   },
   async ({ event, step }) => {
     const { projectId, repoName, visibility, description, githubToken } = event.data as ExportToGithubEvent
 
-    const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY
-    if (!internalKey) {
-      throw new NonRetriableError("POLARIS_CONVEX_INTERNAL_KEY is not configured")
-    }
+    const internalKey = requireInternalKey()
 
     // Set status to exporting
     await step.run("set-exporting-status", async () => {

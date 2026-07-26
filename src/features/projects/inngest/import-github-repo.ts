@@ -1,10 +1,11 @@
 import ky from "ky"
 import { Octokit } from "octokit"
 import { isBinaryFile } from "isbinaryfile"
-import { NonRetriableError } from "inngest"
 
 import { convex } from "@/lib/convex-client"
 import { inngest } from "@/inngest/client"
+import { withInternalKeyFailureHandler } from "@/inngest/with-internal-key-failure-handler"
+import { requireInternalKey } from "@/inngest/require-internal-key"
 
 import { api } from "../../../../convex/_generated/api"
 import { Id } from "../../../../convex/_generated/dataModel"
@@ -22,28 +23,21 @@ export const importGithubRepo = inngest.createFunction(
     triggers: {
       event: "github/import.repo"
     },
-    onFailure: async ({ event, step }) => {
-      const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY
-      if (!internalKey) return
-
-      const { projectId } = event.data.event.data as ImportGithubRepoEvent
-
-      await step.run("set-failed-status", async () => {
+    onFailure: withInternalKeyFailureHandler<ImportGithubRepoEvent>(
+      "set-failed-status",
+      async (internalKey, { projectId }) => {
         await convex.mutation(api.system.updateImportStatus, {
           internalKey,
           projectId,
           status: "failed"
         })
-      })
-    }
+      }
+    )
   },
   async ({ event, step }) => {
     const { owner, repo, projectId, githubToken } = event.data as ImportGithubRepoEvent
 
-    const internalKey = process.env.POLARIS_CONVEX_INTERNAL_KEY
-    if (!internalKey) {
-      throw new NonRetriableError("POLARIS_CONVEX_INTERNAL_KEY is not configured")
-    }
+    const internalKey = requireInternalKey()
 
     const octokit = new Octokit({ auth: githubToken })
 
